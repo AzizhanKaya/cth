@@ -1,5 +1,3 @@
-import re
-
 with open('monitored.ctd',encoding='UTF-8') as f:
     content = f.read()
 
@@ -90,15 +88,11 @@ def grep_text(content):
     return texts
 
 
-#print(grep_text(content))
-
-def process_text(texts):
-
+def process_text(texts, level):
 
     image = 0
-    index = 0
-    
-    for text in texts:
+
+    for index,text in enumerate(texts):
         
 
         text = text.split('>')
@@ -108,29 +102,55 @@ def process_text(texts):
 
         if text[0] == 'justification="left"':
 
-            texts[index]="<image-"+str(image)+">"
-            image +=1
-            index +=1
-            continue
-        
-        
+            texts[index]=f"<img src=/img/{level}/image-{image}.png></img>"
 
-        
+            image +=1
+            
+            continue
 
         vars = text[0].split(' ')
-        print(vars)
-        if vars[0].split('=')[0] == 'scale':
+
+
+        for var in vars:
+
+            if var.split('=')[0] == 'foreground':
+
+                color = var.split('=')[1][2:-1]
+
+                if len(color) == 12:
+                    tmp=""
+                    for n in range(0,12,2):
+                        tmp += color[2*n:2*n+2] 
+                    color = tmp
+                break
+
+            
+
+        if len(vars) == 1 and vars[0].split('=')[0] == 'scale':
 
             scale = vars[0].split('=')[1][1:3]
+            texts[index] = f"<{scale}>{text[1]}</{scale}>"
+            continue
             
-            color = vars[0]
+        if len(vars) == 2 and vars[0].split('=')[0] == 'scale' and vars[1].split('=')[0] == 'foreground':
+            texts[index] = f"<{scale} style='color: #{color}'>{text[1]}</{scale}>"
+            continue
 
-
-            texts[index]=f"<{scale}>{text[1]}</{scale}>"
-
+        if len(vars) == 2 and vars[0].split('=')[0] == 'foreground' and vars[1].split('=')[0] == 'weight':
             
+            texts[index] = f"<b style='color: #{color}'>{text[1]}</b>"
+            continue
 
-        index +=1
+        if vars[0].split('=')[0] == 'link':
+
+            if vars[0].split('=')[1][1:] == 'webs':
+                texts[index] = f"<a href=\"{vars[1]}>{text[1]}</a>"
+                continue
+
+            if vars[0].split('=')[1][1:] == 'node':
+                texts[index] = f"<node={vars[1]}>{text[1]}</node>"
+
+        
 
     return texts
 
@@ -138,18 +158,32 @@ def get_nodes(node=None):
 
 
     indexes = find_node()
+    levels = node_tree()
     nodes=[]
     for i in range(0,len(indexes)):
 
         if i == len(indexes)-1:
-            nodes.append(process_text(grep_text(content[indexes[i]:])))
+            nodes.append(process_text(grep_text(content[indexes[i]:]),levels[i]))
             break
 
-        nodes.append(process_text(grep_text(content[indexes[i]:indexes[i+1]])))
+        nodes.append(process_text(grep_text(content[indexes[i]:indexes[i+1]]),levels[i]))
     
     if node==None:
         return nodes
     else:
         return nodes[node-1]
-    
-print(process_text(grep_text(content)))
+
+def parse():
+
+    nodes=[]
+    for node in get_nodes():
+            
+        cherry=""
+        for line in node:
+            cherry+=line
+        
+        nodes.append(cherry)
+
+    return node_tree(),node_names(),nodes
+
+print(parse)
