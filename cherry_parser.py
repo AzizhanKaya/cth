@@ -1,9 +1,5 @@
-with open('monitored.ctd',encoding='UTF-8') as f:
-    content = f.read()
-
-
-def find_node(content=content, index=0):
-
+def find_node():
+    index = 0
     node = "<node "
     l_index = []
 
@@ -18,29 +14,19 @@ def find_node(content=content, index=0):
 def node_level(index):
 
     spaces=0
-    countdown=0
 
-    while True:
-        countdown -= 1
-        char = content[index + countdown]
-        if char == ' ':
-            spaces+=1
-        elif char == '\n':
-            break
-
+    while index > 0 and content[index-1] == ' ':
+        spaces += 1
+        index -= 1
+    
     return spaces
-
 
 
 def node_tree():
 
     indexes = find_node()
-    tree=[]
-    for index in indexes:
-
-        tree.append(node_level(index)//2)
     
-    return tree
+    return [node_level(idx) // 2 for idx in indexes]
 
 def node_names():
 
@@ -148,7 +134,7 @@ def process_text(texts, level):
                 continue
 
             if vars[0].split('=')[1][1:] == 'node':
-                texts[index] = f"<node={vars[1]}>{text[1]}</node>"
+                texts[index] = f"<node data-id={vars[1][0]}>{text[1]}</node>"
 
         
 
@@ -186,4 +172,10 @@ def parse():
 
     return node_tree(),node_names(),nodes
 
-print(parse)
+def parse_file(file):
+    global content
+    with open(file, encoding='UTF-8') as f:
+        content = f.read()
+    
+    return parse()
+
