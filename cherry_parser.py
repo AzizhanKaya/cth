@@ -48,7 +48,7 @@ def grep_text(content):
 
     def find_reachtext():
 
-        rich_text = "rich_text"
+        rich_text = "<rich_text"
         
         indexes = []
         index=0
@@ -57,8 +57,12 @@ def grep_text(content):
             index = content.find(rich_text, index + 1)
             if index == -1:
                 break
+            
+            
             indexes.append(index)
-        
+            index = content.find('<', index + 1)
+            indexes.append(index)
+
 
         indexes.sort()
         return indexes
@@ -69,9 +73,63 @@ def grep_text(content):
     texts=[]
     for n in range(0,len(indexes),2):
         
-        texts.append(content[indexes[n]+10:indexes[n+1]-2])
+        texts.append(content[indexes[n]+11:indexes[n+1]])
 
     return texts
+
+
+def grep_images():
+
+    def find_image(content):
+
+        encoded_png = "<encoded_png"
+        
+        indexes = []
+        index=0
+
+        while True:
+            index = content.find(encoded_png, index + 1)
+            
+            if index == -1:
+                break
+            
+            index = content.find('>', index + 1)
+            indexes.append(index)
+            index = content.find('<', index + 1)
+            indexes.append(index)
+
+        indexes.sort()
+        return indexes
+    
+
+    node_indexes = find_node()
+    images=[]
+
+    for i in range(len(node_indexes)):
+
+        encoded = []
+
+        if i == len(node_indexes)-1:
+            image_indexes = find_image(content[node_indexes[i]:])
+
+            for n in range(0,len(image_indexes),2):
+                encoded.append(content[node_indexes[i]:][image_indexes[n]:image_indexes[n+1]])
+
+            images.append(encoded)
+            break
+
+        image_indexes = find_image(content[node_indexes[i]:node_indexes[i+1]])
+
+        for n in range(0,len(image_indexes),2):
+
+            encoded.append(content[node_indexes[i]:node_indexes[i+1]][image_indexes[n]:image_indexes[n+1]])
+
+        images.append(encoded)
+
+    
+
+
+    return images
 
 
 def process_text(texts, level):
@@ -83,10 +141,9 @@ def process_text(texts, level):
 
         text = text.split('>')
         if len(text) == 1:
-            index +=1
             continue
 
-        if text[0] == 'justification="left"':
+        if text[0][:20] == 'justification="left"':
 
             texts[index]=f"<img src=/img/{level}/image-{image}.png></img>"
 
@@ -126,7 +183,11 @@ def process_text(texts, level):
             
             texts[index] = f"<b style='color: #{color}'>{text[1]}</b>"
             continue
-
+        
+        if len(vars) == 1 and vars[0].split('=')[0] == 'foreground':
+            texts[index] = f"<span style='color: #{color}'>{text[1]}</span>"
+            continue
+        
         if vars[0].split('=')[0] == 'link':
 
             if vars[0].split('=')[1][1:] == 'webs':
@@ -149,10 +210,10 @@ def get_nodes(node=None):
     for i in range(0,len(indexes)):
 
         if i == len(indexes)-1:
-            nodes.append(process_text(grep_text(content[indexes[i]:]),levels[i]))
+            nodes.append(process_text(grep_text(content[indexes[i]:]),i))
             break
 
-        nodes.append(process_text(grep_text(content[indexes[i]:indexes[i+1]]),levels[i]))
+        nodes.append(process_text(grep_text(content[indexes[i]:indexes[i+1]]),i))
     
     if node==None:
         return nodes
